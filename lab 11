@@ -1,0 +1,154 @@
+install.packages("tidyverse")
+library(tidyverse)
+library(ggplot2)
+install.packages("purrr")
+library(maps)
+
+clim<- read.csv("https://userpage.fu-berlin.de/soga/data/raw-data/Climfrance.csv", sep=";")
+
+str(clim)
+View(clim)
+
+#Exercise 1
+#Fix problems with variables "altitude" and "p_mean"
+
+#$ altitude         : chr  "3" "5" "8" "10" ...
+#$ p_mean           : chr  "546" "862" "931" "735" ...
+
+#Let's check
+summary(clim$altitude)
+summary(clim$p_mean)
+
+sum(is.na(data$altitude))  # Check for missing values
+sum(is.na(data$p_mean))
+
+#We need to convert the variables to numerical values
+
+clim$altitude <- as.numeric(clim$altitude)
+clim$p_mean <- as.numeric(clim$p_mean)
+
+
+
+#Plot 
+
+france_map <- map_data("france")
+
+
+# Plot the stations
+ggplot() +
+  geom_polygon(data = france_map, aes(x = long, y = lat, group = group), 
+               fill = "white", color = "black") +
+  geom_point(data = clim, aes(x = lon, y = lat, color = t_mean), 
+             size = 3) +
+  scale_color_gradient(low = "blue", high = "red", name = "Mean Temp") +
+  labs(title = "Climate Stations in France", x = "Longitude", y = "Latitude") +
+  theme_minimal()
+
+#Exercise 1
+#Exclude the two high mountain extremes
+
+climfrar<- clim[1:34,]
+View(climfrar)
+
+model<-lm(t_mean~lat+lon+altitude,data=climfrar)
+
+summary(model)
+
+
+
+# When all predictors are equal to zero, the predicted value of the mean temperature is approximately 37.27
+#For every one-unit increase in latitude, the mean temperature decreases by approximately 0.53 units, holding other variables constant.
+#For every one-unit increase in longitude, the mean temperature increases by approximately 0.03 units, holding other variables constant.
+#For every one-unit increase in altitude, the mean temperature decreases by approximately 0.0064 units, holding other variables constant.
+
+#Exercise 2
+
+
+#Significant variables: Lat: p= 1.24x10^-10
+#Altitude: p= 3.17 x 10^-8
+#Non-Significant Variable: lon: p=0.424
+
+#1. Exclude Non-Significant Variable
+
+model2<- lm(t_mean~lat+ altitude, data=climfrar)  #Model without Longitude
+
+ summary(model2)
+ 
+ #2. Predict Temperature for Mont-Ventoux and Pic-du-midi
+ 
+ 
+# Extract the data for these stations and use the model to predict their temperatures.
+ 
+ new_data <- clim[c(34, 35), c("altitude", "lat", "lon")]
+ new_data$altitude <- as.numeric(c(NA, NA))  # Assign NA to the altitude column
+ rownames(new_data) <- c("Mont-Ventoux", "Pic-du-Midi") 
+
+ 
+ # Replace NA with the mean of the altitude column (excluding NAs)
+ mean_altitude <- mean(clim$altitude, na.rm = TRUE)
+ new_data$altitude <- c(mean_altitude, mean_altitude)  # Replace NA with mean
+ 
+ predictions <- predict(model2, newdata = new_data, interval = "confidence")
+ print(predictions)
+summary(predictions)
+ 
+ #                fit      lwr      upr
+ #Mont-Ventoux 12.38589 12.09548 12.67630
+ #Pic-du-Midi  12.87230 12.52469 13.21991
+ 
+
+#Model 2 interpretation
+#Intercept= 37.91
+#The intercept represents the estimated mean annual temperature when both latitude and altitude are zero.
+ 
+#For every 1° increase in latitude, the mean annual temperature is expected to decrease by 0.55°C, holding altitude constant.
+
+#For every 1-meter increase in altitude, the mean annual temperature is expected to decrease by 0.0063°C, holding latitude constant.
+
+
+#Exercise 3
+
+#3D scatterplot
+
+install.packages("plotly")
+library(plotly)
+
+plot_ly(data = climfrar, 
+        x = ~altitude, y = ~lat, z = ~t_mean, 
+        type = "scatter3d", 
+        mode = "markers", 
+        marker = list(size = 5, color = ~t_mean, colorscale = "Viridis")) %>%
+  layout(scene = list(xaxis = list(title = 'Altitude'),
+                      yaxis = list(title = 'Latitude'),
+                      zaxis = list(title = 'Mean Temperature')))
+
+
+#Summary Model Output
+
+
+
+#Residuals:
+  #Min       1Q   Median       3Q      Max 
+#-1.79206 -0.27571 -0.00556  0.30536  2.71871 
+
+#Coefficients:
+  #Estimate Std. Error t value Pr(>|t|)
+#(Intercept) 37.9147567  2.4828724   15.27 5.68e-16
+#lat         -0.5465325  0.0532610  -10.26 1.72e-11
+"altitude    -0.0062643  0.0008443   -7.42 2.34e-08
+
+(Intercept) ***
+  lat         ***
+  altitude    ***
+  ---
+  Signif. codes:  
+  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.7268 on 31 degrees of freedom
+Multiple R-squared:  0.8292,	Adjusted R-squared:  0.8182 
+F-statistic: 75.26 on 2 and 31 DF,  p-value: 1.268e-12
+
+
+
+
+ 
